@@ -290,7 +290,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     position: absolute;
     top: 16px;
     left: 16px;
-    z-index: 20;
+    z-index: 30;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius);
@@ -307,6 +307,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .control-panel {
     top: 72px;
     bottom: auto;
+    z-index: 25;
     left: 16px;
     width: calc(100vw - 32px);
     max-height: calc(100vh - 100px);

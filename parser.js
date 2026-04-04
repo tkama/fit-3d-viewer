@@ -75,5 +75,18 @@ export function processFitData(fitData) {
     });
   });
 
-  return { records: validRecords, metrics };
+  let totalAscent = 0;
+  if (fitData.sessions && fitData.sessions.length > 0 && fitData.sessions[0].total_ascent) {
+    totalAscent = fitData.sessions[0].total_ascent;
+  } else {
+    for (let i = 1; i < validRecords.length; i++) {
+      const pAlt = getValueSafe(validRecords[i - 1], 'altitude');
+      const cAlt = getValueSafe(validRecords[i], 'altitude');
+      if (cAlt > pAlt) {
+        totalAscent += (cAlt - pAlt);
+      }
+    }
+  }
+
+  return { records: validRecords, metrics, session: { totalAscent: Math.round(totalAscent) } };
 }

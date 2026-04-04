@@ -22,6 +22,14 @@ const pauseBtn = document.getElementById('pause-btn');
 const stopBtn = document.getElementById('stop-btn');
 const hudPanel = document.getElementById('hud-panel');
 const hudStats = document.getElementById('hud-stats');
+const menuToggleBtn = document.getElementById('menu-toggle-btn');
+const controlPanel = document.getElementById('control-panel');
+
+if (menuToggleBtn && controlPanel) {
+  menuToggleBtn.addEventListener('click', () => {
+    controlPanel.classList.toggle('open');
+  });
+}
 
 // Caches for DeckGL reactive rendering
 let cachedStaticLayers = [];
@@ -363,12 +371,14 @@ function updateMap(isDynamicUpdate = false) {
     });
     const avgHR = hrCount > 0 ? Math.round(hrSum / hrCount) : 'N/A';
     const displayMaxPower = currentProcessedData.metrics.power.max > -999 && currentProcessedData.metrics.power.max !== Infinity ? Math.round(currentProcessedData.metrics.power.max) : 'N/A';
+    const displayAscent = currentProcessedData.session?.totalAscent || 0;
 
     infoPanel.style.display = 'block';
     infoStats.innerHTML = `
       <strong>Points:</strong> ${records.length}<br>
       <strong>Max Power:</strong> ${displayMaxPower} W<br>
       <strong>Avg HR:</strong> ${avgHR} bpm<br>
+      <strong>Total Ascent:</strong> ${displayAscent} m<br>
     `;
   } else {
     deckgl.setProps({ layers: layersToDraw });
@@ -385,6 +395,10 @@ async function handleFileUpload(file) {
     currentFrameProgress = 0; // Reset
     updateHUD(currentFrameProgress);
     updateMap(false);
+
+    if (controlPanel) {
+      controlPanel.classList.remove('open');
+    }
   } catch (err) {
     alert("エラーが発生しました: " + err.message);
   } finally {

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>FIT Data 3D Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/deck.gl@9.0.5/dist.min.js"></script>
+  
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="loader" style="display: none;">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+  <div id="map"></div>
+  <div class="control-panel">
+    <h1>FIT Explorer 3D</h1>
+    <div class="settings">
+      <div class="setting-group">
+        <label for="metric-select">高さ (Z軸)</label>
+        <select id="metric-select">
+          <option value="speed" selected>速度 (Speed)</option>
+          <option value="power">パワー (Power)</option>
+          <option value="cadence">ケイデンス (Cadence)</option>
+          <option value="heart_rate">心拍数 (Heart Rate)</option>
+          <option value="altitude">標高 (Altitude)</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label for="color-select">色分け基準</label>
+        <select id="color-select">
+          <option value="speed" selected>速度 (Speed)</option>
+          <option value="power">パワー (Power)</option>
+          <option value="cadence">ケイデンス (Cadence)</option>
+          <option value="heart_rate">心拍数 (Heart Rate)</option>
+          <option value="altitude">標高 (Altitude)</option>
+        </select>
+      </div>
+      
+      <div class="setting-group" id="ftp-group">
+        <label for="ftp-input">FTP設定 (<span id="ftp-value">200</span>W)</label>
+        <input type="range" id="ftp-input" min="50" max="500" step="1" value="200">
+      </div>
+      
+      <div class="setting-group">
+        <label for="height-scale">高さの倍率 (<span id="scale-value">1.0</span>x)</label>
+        <input type="range" id="height-scale" min="0.1" max="5.0" step="0.1" value="1.0">
+      </div>
+
+      <div class="setting-group" style="margin-top: 12px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
+        <label>カメラ再生 (Bird's-eye)</label>
+        <div style="display: flex; gap: 8px;">
+          <button id="play-btn" class="ctrl-btn play-btn">再生</button>
+          <button id="pause-btn" class="ctrl-btn pause-btn">一時停止</button>
+          <button id="stop-btn" class="ctrl-btn stop-btn">停止</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label for="speed-input">再生速度 (<span id="speed-value">10</span>x)</label>
+        <input type="range" id="speed-input" min="1" max="250" step="1" value="10">
+      </div>
+    </div>
+    
+    <div class="drop-zone" id="drop-zone">
+      <p>FITファイルをドロップ<br>またはタップして選択</p>
+      <input type="file" id="file-input" accept=".fit" style="display:none" />
+    </div>
+    
+    <div class="info-panel" id="info-panel" style="display: none;">
+      <h3 id="info-title">Activity</h3>
+      <p id="info-stats"></p>
+    </div>
+  </div>
+
+  <div class="hud-panel" id="hud-panel" style="display: none;">
+    <div class="hud-stats" id="hud-stats">
+      <!-- リアルタイムデータが入ります -->
+    </div>
+  </div>
+  
+  <!-- ESM entry -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

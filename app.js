@@ -2,6 +2,13 @@ import { parseFitFile, processFitData } from './parser.js';
 
 let deckgl = null;
 let currentProcessedData = null;
+let currentViewState = {
+  longitude: 139.7,
+  latitude: 35.7,
+  zoom: 11,
+  pitch: 45,
+  bearing: 0
+};
 
 // UI Elements
 const loader = document.getElementById('loader');
@@ -28,10 +35,17 @@ const rangeStartInput = document.getElementById('range-start');
 const rangeEndInput = document.getElementById('range-end');
 const rangeStartVal = document.getElementById('range-start-val');
 const rangeEndVal = document.getElementById('range-end-val');
+const hudPositionSelect = document.getElementById('hud-position-select');
 
 if (menuToggleBtn && controlPanel) {
   menuToggleBtn.addEventListener('click', () => {
     controlPanel.classList.toggle('open');
+  });
+}
+
+if (hudPositionSelect) {
+  hudPositionSelect.addEventListener('change', (e) => {
+    hudPanel.className = 'hud-panel ' + e.target.value;
   });
 }
 
@@ -110,12 +124,9 @@ function initDeckGL() {
   deckgl = new deck.DeckGL({
     container: 'map',
     mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    initialViewState: {
-      longitude: 139.7,
-      latitude: 35.7,
-      zoom: 11,
-      pitch: 45,
-      bearing: 0
+    initialViewState: currentViewState,
+    onViewStateChange: ({viewState}) => {
+      currentViewState = viewState;
     },
     controller: {
       doubleClickZoom: true,
@@ -194,7 +205,7 @@ function updateHUD(idx) {
     hudPanel.style.display = 'none';
     return;
   }
-  hudPanel.style.display = 'block';
+  hudPanel.style.display = '';
   
   const r = currentProcessedData.records[Math.floor(idx)];
   if (!r) return;
@@ -249,6 +260,21 @@ function handlePathClick(info) {
     currentFrameProgress = info.index + startIndex;
     updateHUD(currentFrameProgress);
     updateMap(true);
+  }
+}
+
+function handlePathHover(info) {
+  if (info && info.index >= 0) {
+    let startIndex = 0;
+    if (currentProcessedData && currentProcessedData.records) {
+      const records = currentProcessedData.records;
+      const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+      startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+    }
+    const hoverIndex = info.index + startIndex;
+    updateHUD(hoverIndex);
+  } else {
+    updateHUD(currentFrameProgress);
   }
 }
 
@@ -335,6 +361,7 @@ function updateMap(isDynamicUpdate = false, resetCamera = true) {
       getColor: d => d.color,
       getWidth: d => 1,
       onClick: handlePathClick,
+      onHover: handlePathHover,
       autoHighlight: true,
       highlightColor: [255, 255, 255]
     });
@@ -348,6 +375,7 @@ function updateMap(isDynamicUpdate = false, resetCamera = true) {
       wireframe: false,
       pickable: true,
       onClick: handlePathClick,
+      onHover: handlePathHover,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 100]
     });
@@ -501,6 +529,7 @@ speedInput.addEventListener('input', e => {
 });
 ftpInput.addEventListener('input', e => {
   ftpValue.innerText = e.target.value;
+  localStorage.setItem('fit_ftp_value', e.target.value);
   updateMap(false, false);
 });
 
@@ -584,8 +613,8 @@ function playbackLoop() {
     initialViewState: {
       longitude: lon,
       latitude: lat,
-      zoom: 14.5, // 拡大率を落として全体像を見やすく
-      pitch: 60,
+      zoom: currentViewState.zoom !== undefined ? currentViewState.zoom : 14.5,
+      pitch: currentViewState.pitch !== undefined ? currentViewState.pitch : 60,
       bearing: currentBearing,
       transitionDuration: 0 // Manual smooth transition per frame
     }
@@ -594,12 +623,15 @@ function playbackLoop() {
   animationFrameId = requestAnimationFrame(playbackLoop);
 }
 
-playBtn.addEventListener('click', () => {
-  if (!isPlaying && currentProcessedData) {
-    isPlaying = true;
+function setPlayState(playing) {
+  if (playing === isPlaying) return;
+  isPlaying = playing;
+  
+  const hudPlayIcon = document.getElementById('hud-play-icon');
+  const hudPauseIcon = document.getElementById('hud-pause-icon');
+  
+  if (isPlaying) {
     lastBearing = null;
-    
-    // Ensure we start within the selected range
     const records = currentProcessedData.records;
     const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
     const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
@@ -611,21 +643,36 @@ playBtn.addEventListener('click', () => {
     }
     
     playbackLoop();
+    if (hudPlayIcon) hudPlayIcon.style.display = 'none';
+    if (hudPauseIcon) hudPauseIcon.style.display = 'block';
+  } else {
+    cancelAnimationFrame(animationFrameId);
+    if (hudPlayIcon) hudPlayIcon.style.display = 'block';
+    if (hudPauseIcon) hudPauseIcon.style.display = 'none';
   }
+}
+
+playBtn.addEventListener('click', () => {
+  if (currentProcessedData) setPlayState(true);
 });
 
-pauseBtn.addEventListener('click', () => {
-  if (isPlaying) {
-    isPlaying = false;
-    cancelAnimationFrame(animationFrameId);
-  }
-});
+pauseBtn.addEventListener('click', () => setPlayState(false));
+
+const hudPlayToggleBtn = document.getElementById('hud-play-toggle-btn');
+if (hudPlayToggleBtn) {
+  hudPlayToggleBtn.addEventListener('click', () => {
+    if (currentProcessedData) {
+      setPlayState(!isPlaying);
+    }
+  });
+}
 
 stopBtn.addEventListener('click', () => {
   if (isPlaying || currentFrameProgress > 0) {
-    isPlaying = false;
-    cancelAnimationFrame(animationFrameId);
+    setPlayState(false);
     currentFrameProgress = 0; // reset to beginning
+    updateHUD(0); // Update HUD to start
+    updateMap(true); // Redraw
     
     // On stop, smoothly pull back the camera
     const records = currentProcessedData.records;
@@ -640,8 +687,8 @@ stopBtn.addEventListener('click', () => {
       initialViewState: {
         longitude: (minLon + maxLon) / 2,
         latitude: (minLat + maxLat) / 2,
-        zoom: 12,
-        pitch: 60,
+        zoom: currentViewState.zoom || 12,
+        pitch: currentViewState.pitch || 60,
         bearing: 0,
         transitionDuration: 1500,
         transitionInterpolator: new deck.FlyToInterpolator()
@@ -651,4 +698,10 @@ stopBtn.addEventListener('click', () => {
 });
 
 // Initialization
+const savedFTP = localStorage.getItem('fit_ftp_value');
+if (savedFTP && ftpInput) {
+  ftpInput.value = savedFTP;
+  if (ftpValue) ftpValue.innerText = savedFTP;
+}
+
 initDeckGL();

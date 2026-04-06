@@ -64,20 +64,6 @@
       </div>
 
       <div class="setting-group" style="margin-top: 12px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
-        <label>表示範囲 (Data Range)</label>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span style="font-size: 0.8rem; color: var(--text-secondary);">Start</span>
-          <input type="range" id="range-start" min="0" max="100" step="0.1" value="0">
-          <span id="range-start-val" style="font-size: 0.8rem; color: var(--text-secondary); width: 40px; text-align: right;">0.0%</span>
-        </div>
-        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
-          <span style="font-size: 0.8rem; color: var(--text-secondary);">End</span>
-          <input type="range" id="range-end" min="0" max="100" step="0.1" value="100">
-          <span id="range-end-val" style="font-size: 0.8rem; color: var(--text-secondary); width: 40px; text-align: right;">100.0%</span>
-        </div>
-      </div>
-
-      <div class="setting-group" style="margin-top: 12px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
         <label>カメラ再生 (Bird's-eye)</label>
         <div style="display: flex; gap: 8px;">
           <button id="play-btn" class="ctrl-btn play-btn">再生</button>
@@ -96,13 +82,43 @@
       <input type="file" id="file-input" accept=".fit" style="display:none" />
     </div>
     
+    <div class="setting-group" style="margin-top: 12px; padding-top: 8px; margin-bottom: 12px;">
+      <label>表示範囲 (Data Range)</label>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary);">Start</span>
+        <input type="range" id="range-start" min="0" max="100" step="0.1" value="0">
+        <span id="range-start-val" style="font-size: 0.8rem; color: var(--text-secondary); width: 40px; text-align: right;">0.0%</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary);">End</span>
+        <input type="range" id="range-end" min="0" max="100" step="0.1" value="100">
+        <span id="range-end-val" style="font-size: 0.8rem; color: var(--text-secondary); width: 40px; text-align: right;">100.0%</span>
+      </div>
+    </div>
+
+    <div class="setting-group" style="margin-bottom: 12px;">
+      <label for="hud-position-select">HUD表示位置</label>
+      <select id="hud-position-select">
+        <option value="top-right" selected>右上 (Top Right)</option>
+        <option value="bottom">下部 (Bottom)</option>
+        <option value="hidden">非表示 (Hidden)</option>
+      </select>
+    </div>
+
     <div class="info-panel" id="info-panel" style="display: none;">
       <h3 id="info-title">Activity</h3>
       <p id="info-stats"></p>
     </div>
   </div>
 
-  <div class="hud-panel" id="hud-panel" style="display: none;">
+  <div class="hud-panel top-right" id="hud-panel" style="display: none;">
+    <div class="hud-header">
+      <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 8px;">LIVE</div>
+      <button id="hud-play-toggle-btn" class="play-pause-btn">
+        <svg id="hud-play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="hud-pause-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+    </div>
     <div class="hud-stats" id="hud-stats">
       <!-- リアルタイムデータが入ります -->
     </div>

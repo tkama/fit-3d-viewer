@@ -211,6 +211,7 @@ function updateHUD(idx) {
   if (!r) return;
 
   const power = Math.round(getMetricValue(r, 'power'));
+  const power3s = Math.round(getMetricValue(r, 'power_3s'));
   const speed = getMetricValue(r, 'speed').toFixed(1);
   const hr = Math.round(getMetricValue(r, 'heart_rate'));
   const alt = Math.round(getMetricValue(r, 'altitude'));
@@ -242,6 +243,7 @@ function updateHUD(idx) {
     <div class="hud-item" style="color: #60a5fa;"><span class="hud-label">Time</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${timeStr}</span></div></div>
     <div class="hud-item" style="color: #60a5fa; margin-bottom: 8px;"><span class="hud-label">Elapsed</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${elapsedStr}</span></div></div>
     <div class="hud-item"><span class="hud-label">Power</span><div><span class="hud-value">${power > 0 ? power : '-'}</span><span class="hud-unit">W</span></div></div>
+    <div class="hud-item"><span class="hud-label">Pwr(3s)</span><div><span class="hud-value">${power3s > 0 ? power3s : '-'}</span><span class="hud-unit">W</span></div></div>
     <div class="hud-item"><span class="hud-label">Heart</span><div><span class="hud-value">${hr > 0 ? hr : '-'}</span><span class="hud-unit">bpm</span></div></div>
     <div class="hud-item"><span class="hud-label">Speed</span><div><span class="hud-value">${speed > 0 ? speed : '-'}</span><span class="hud-unit">km/h</span></div></div>
     <div class="hud-item"><span class="hud-label">Cadence</span><div><span class="hud-value">${cad}</span><span class="hud-unit">rpm</span></div></div>
@@ -309,8 +311,8 @@ function updateMap(isDynamicUpdate = false, resetCamera = true) {
       const zVal2 = getMetricValue(p2, zMetric);
       
       let multiplier;
-      if (zMetric === 'altitude') multiplier = 30.0;
-      else if (zMetric === 'power') multiplier = 10.0;
+      if (zMetric === 'altitude') multiplier = 1.0;
+      else if (zMetric === 'power' || zMetric === 'power_3s') multiplier = 10.0;
       else if (zMetric === 'speed') multiplier = 100.0;
       else multiplier = 20.0;
 
@@ -320,7 +322,7 @@ function updateMap(isDynamicUpdate = false, resetCamera = true) {
 
       const valColor = getMetricValue(p1, colorMetric);
       let pathColor;
-      if (colorMetric === 'power') {
+      if (colorMetric === 'power' || colorMetric === 'power_3s') {
         pathColor = getPowerZoneColor(valColor, ftp);
       } else {
         pathColor = getColorForValue(valColor, colorMin, colorMax);

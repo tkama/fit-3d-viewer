@@ -6,7 +6,7 @@ export async function parseFitFile(arrayBuffer) {
       const fitParser = new FitParser({
         force: true,
         speedUnit: 'km/h',
-        lengthUnit: 'km',
+        lengthUnit: 'm',
         temperatureUnit: 'celcius',
         elapsedRecordField: true,
         mode: 'list',
@@ -60,12 +60,27 @@ export function processFitData(fitData) {
     speed: { min: Infinity, max: -Infinity }
   };
 
-  validRecords.forEach(r => {
+  let power3sMetric = { min: Infinity, max: -Infinity };
+
+  for (let i = 0; i < validRecords.length; i++) {
+    const r = validRecords[i];
     const lat = r.position_lat;
     const lon = r.position_long;
     // some libraries leave it as semicircles
     if (Math.abs(lat) > 180) r.position_lat = lat * (180 / Math.pow(2, 31));
     if (Math.abs(lon) > 180) r.position_long = lon * (180 / Math.pow(2, 31));
+
+    let pSum = 0;
+    let pCount = 0;
+    // 3s moving average (current and 2 preceding points)
+    for (let j = Math.max(0, i - 2); j <= i; j++) {
+       pSum += getValueSafe(validRecords[j], 'power');
+       pCount++;
+    }
+    r.power_3s = pCount > 0 ? (pSum / pCount) : 0;
+    
+    if (r.power_3s < power3sMetric.min) power3sMetric.min = r.power_3s;
+    if (r.power_3s > power3sMetric.max) power3sMetric.max = r.power_3s;
 
     // Calculate mins and maxs
     ['altitude', 'power', 'cadence', 'heart_rate', 'speed'].forEach(key => {
@@ -73,7 +88,8 @@ export function processFitData(fitData) {
        if (v < metrics[key].min) metrics[key].min = v;
        if (v > metrics[key].max) metrics[key].max = v;
     });
-  });
+  }
+  metrics.power_3s = power3sMetric;
 
   let totalAscent = 0;
   if (fitData.sessions && fitData.sessions.length > 0 && fitData.sessions[0].total_ascent) {

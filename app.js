@@ -113,7 +113,13 @@ function initDeckGL() {
       pitch: 45,
       bearing: 0
     },
-    controller: true,
+    controller: {
+      doubleClickZoom: true,
+      touchZoom: true,
+      touchRotate: true,
+      dragRotate: true,
+      dragPan: true
+    },
     layers: []
   });
 }

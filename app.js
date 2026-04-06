@@ -24,6 +24,10 @@ const hudPanel = document.getElementById('hud-panel');
 const hudStats = document.getElementById('hud-stats');
 const menuToggleBtn = document.getElementById('menu-toggle-btn');
 const controlPanel = document.getElementById('control-panel');
+const rangeStartInput = document.getElementById('range-start');
+const rangeEndInput = document.getElementById('range-end');
+const rangeStartVal = document.getElementById('range-start-val');
+const rangeEndVal = document.getElementById('range-end-val');
 
 if (menuToggleBtn && controlPanel) {
   menuToggleBtn.addEventListener('click', () => {
@@ -236,13 +240,19 @@ function updateHUD(idx) {
 
 function handlePathClick(info) {
   if (info && info.index >= 0) {
-    currentFrameProgress = info.index;
+    let startIndex = 0;
+    if (currentProcessedData && currentProcessedData.records) {
+      const records = currentProcessedData.records;
+      const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+      startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+    }
+    currentFrameProgress = info.index + startIndex;
     updateHUD(currentFrameProgress);
     updateMap(true);
   }
 }
 
-function updateMap(isDynamicUpdate = false) {
+function updateMap(isDynamicUpdate = false, resetCamera = true) {
   if (!currentProcessedData || !deckgl) return;
   
   if (!isDynamicUpdate) {
@@ -256,10 +266,16 @@ function updateMap(isDynamicUpdate = false) {
     const colorMin = metrics[colorMetric].min;
     const colorMax = metrics[colorMetric].max;
     
+    const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+    const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
+    
+    const startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+    const endIndex = Math.ceil((rangeEndVal / 100) * (records.length - 1));
+    
     const pathData = [];
     const polygonData = [];
     
-    for (let i = 0; i < records.length - 1; i++) {
+    for (let i = startIndex; i < endIndex && i < records.length - 1; i++) {
       const p1 = records[i];
       const p2 = records[i + 1];
       
@@ -344,47 +360,80 @@ function updateMap(isDynamicUpdate = false) {
   if (markerLayer) layersToDraw.push(markerLayer);
 
   if (!isDynamicUpdate) {
-    const records = currentProcessedData.records;
-    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
-    records.forEach(r => {
-      if(r.position_long < minLon) minLon = r.position_long;
-      if(r.position_long > maxLon) maxLon = r.position_long;
-      if(r.position_lat < minLat) minLat = r.position_lat;
-      if(r.position_lat > maxLat) maxLat = r.position_lat;
-    });
-
-    const centerLon = (minLon + maxLon) / 2;
-    const centerLat = (minLat + maxLat) / 2;
-
-    deckgl.setProps({
-      layers: layersToDraw,
-      initialViewState: {
-        longitude: centerLon,
-        latitude: centerLat,
-        zoom: 12,
-        pitch: 60,
-        bearing: 0,
-        transitionDuration: 1500,
-        transitionInterpolator: new deck.FlyToInterpolator()
+    if (resetCamera) {
+      const records = currentProcessedData.records;
+      
+      const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+      const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
+      const startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+      const endIndex = Math.ceil((rangeEndVal / 100) * (records.length - 1));
+      
+      let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+      
+      for (let i = startIndex; i <= endIndex && i < records.length; i++) {
+        const r = records[i];
+        if(r.position_long < minLon) minLon = r.position_long;
+        if(r.position_long > maxLon) maxLon = r.position_long;
+        if(r.position_lat < minLat) minLat = r.position_lat;
+        if(r.position_lat > maxLat) maxLat = r.position_lat;
       }
-    });
+      
+      // If we filtered out all points somehow, use defaults
+      if (minLon > maxLon) {
+        minLon = 139.7; maxLon = 139.7;
+        minLat = 35.7; maxLat = 35.7;
+      }
+
+      const centerLon = (minLon + maxLon) / 2;
+      const centerLat = (minLat + maxLat) / 2;
+
+      deckgl.setProps({
+        layers: layersToDraw,
+        initialViewState: {
+          longitude: centerLon,
+          latitude: centerLat,
+          zoom: 12,
+          pitch: 60,
+          bearing: 0,
+          transitionDuration: 1500,
+          transitionInterpolator: new deck.FlyToInterpolator()
+        }
+      });
+    } else {
+      deckgl.setProps({ layers: layersToDraw });
+    }
     
-    // Calculate stats
+    const records = currentProcessedData.records;
+    const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+    const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
+    const startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+    const endIndex = Math.ceil((rangeEndVal / 100) * (records.length - 1));
+
+    // Calculate stats dynamic to range
     let hrSum = 0; let hrCount = 0;
-    records.forEach(r => {
+    let localMaxPower = -1;
+    for (let i = startIndex; i <= endIndex && i < records.length; i++) {
+      const r = records[i];
       const hr = r.heart_rate;
       if (hr && hr > 0) { hrSum += hr; hrCount++; }
-    });
+      const power = getMetricValue(r, 'power');
+      if (power > localMaxPower) { localMaxPower = power; }
+    }
+    
     const avgHR = hrCount > 0 ? Math.round(hrSum / hrCount) : 'N/A';
-    const displayMaxPower = currentProcessedData.metrics.power.max > -999 && currentProcessedData.metrics.power.max !== Infinity ? Math.round(currentProcessedData.metrics.power.max) : 'N/A';
+    const displayMaxPower = localMaxPower > 0 ? Math.round(localMaxPower) : 'N/A';
     const displayAscent = currentProcessedData.session?.totalAscent || 0;
 
     infoPanel.style.display = 'block';
+    
+    const totalSelected = endIndex - startIndex + 1;
+    const pct = totalSelected === records.length ? '' : ` (${Math.round(totalSelected/records.length*100)}%)`;
+    
     infoStats.innerHTML = `
-      <strong>Points:</strong> ${records.length}<br>
+      <strong>Points:</strong> ${totalSelected} / ${records.length}${pct}<br>
       <strong>Max Power:</strong> ${displayMaxPower} W<br>
       <strong>Avg HR:</strong> ${avgHR} bpm<br>
-      <strong>Total Ascent:</strong> ${displayAscent} m<br>
+      <strong>Session Ascent:</strong> ${displayAscent} m<br>
     `;
   } else {
     deckgl.setProps({ layers: layersToDraw });
@@ -398,9 +447,17 @@ async function handleFileUpload(file) {
     const arrayBuffer = await file.arrayBuffer();
     const rawData = await parseFitFile(arrayBuffer);
     currentProcessedData = processFitData(rawData);
+    
+    if (rangeStartInput && rangeEndInput) {
+      rangeStartInput.value = 0;
+      rangeStartVal.innerText = '0.0%';
+      rangeEndInput.value = 100;
+      rangeEndVal.innerText = '100.0%';
+    }
+    
     currentFrameProgress = 0; // Reset
     updateHUD(currentFrameProgress);
-    updateMap(false);
+    updateMap(false, true);
 
     if (controlPanel) {
       controlPanel.classList.remove('open');
@@ -432,20 +489,44 @@ fileInput.addEventListener('change', e => {
 
 metricSelect.addEventListener('change', e => {
   colorSelect.value = e.target.value; // Sync the color metric when height metric changes
-  updateMap();
+  updateMap(false, false);
 });
-colorSelect.addEventListener('change', updateMap);
+colorSelect.addEventListener('change', () => updateMap(false, false));
 scaleInput.addEventListener('input', e => {
   scaleValue.innerText = e.target.value;
-  updateMap();
+  updateMap(false, false);
 });
 speedInput.addEventListener('input', e => {
   speedValue.innerText = e.target.value;
 });
 ftpInput.addEventListener('input', e => {
   ftpValue.innerText = e.target.value;
-  updateMap();
+  updateMap(false, false);
 });
+
+if (rangeStartInput && rangeEndInput) {
+  rangeStartInput.addEventListener('input', e => {
+    let startVal = parseFloat(e.target.value);
+    let endVal = parseFloat(rangeEndInput.value);
+    if (startVal > endVal) {
+      startVal = endVal;
+      rangeStartInput.value = startVal;
+    }
+    rangeStartVal.innerText = startVal.toFixed(1) + '%';
+    updateMap(false, false);
+  });
+
+  rangeEndInput.addEventListener('input', e => {
+    let endVal = parseFloat(e.target.value);
+    let startVal = parseFloat(rangeStartInput.value);
+    if (endVal < startVal) {
+      endVal = startVal;
+      rangeEndInput.value = endVal;
+    }
+    rangeEndVal.innerText = endVal.toFixed(1) + '%';
+    updateMap(false, false);
+  });
+}
 
 // Playback Logic
 let animationFrameId = null;
@@ -466,11 +547,16 @@ function playbackLoop() {
   const records = currentProcessedData.records;
   if (!records || records.length === 0) return;
   
+  const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+  const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
+  const startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+  const endIndex = Math.ceil((rangeEndVal / 100) * (records.length - 1));
+  
   const speed = parseFloat(speedInput.value);
   currentFrameProgress += (speed / 60);
 
-  if (currentFrameProgress >= records.length - 1) {
-    currentFrameProgress = 0; // Loop around
+  if (currentFrameProgress < startIndex || currentFrameProgress >= endIndex) {
+    currentFrameProgress = startIndex; // Loop around within range
   }
 
   const idx = Math.floor(currentFrameProgress);
@@ -512,6 +598,18 @@ playBtn.addEventListener('click', () => {
   if (!isPlaying && currentProcessedData) {
     isPlaying = true;
     lastBearing = null;
+    
+    // Ensure we start within the selected range
+    const records = currentProcessedData.records;
+    const rangeStartVal = rangeStartInput ? parseFloat(rangeStartInput.value) : 0;
+    const rangeEndVal = rangeEndInput ? parseFloat(rangeEndInput.value) : 100;
+    const startIndex = Math.floor((rangeStartVal / 100) * (records.length - 1));
+    const endIndex = Math.ceil((rangeEndVal / 100) * (records.length - 1));
+    
+    if (currentFrameProgress < startIndex || currentFrameProgress >= endIndex) {
+      currentFrameProgress = startIndex;
+    }
+    
     playbackLoop();
   }
 });

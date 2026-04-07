@@ -115,14 +115,17 @@
 
   <div class="hud-panel top-right" id="hud-panel" style="display: none;">
     <div class="hud-header">
-      <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 8px;">LIVE</div>
+      <div id="hud-status" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 8px;">SUMMARY</div>
       <button id="hud-play-toggle-btn" class="play-pause-btn">
         <svg id="hud-play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         <svg id="hud-pause-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
       </button>
     </div>
-    <div class="hud-stats" id="hud-stats">
+    <div id="hud-stats-live" class="hud-stats" style="display: none;">
       <!-- リアルタイムデータが入ります -->
+    </div>
+    <div id="hud-stats-summary" class="hud-stats">
+      <!-- サマリーデータが入ります -->
     </div>
   </div>
   

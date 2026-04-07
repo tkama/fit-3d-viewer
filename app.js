@@ -206,49 +206,90 @@ function updateHUD(idx) {
     return;
   }
   hudPanel.style.display = '';
+
+  const hudStatus = document.getElementById('hud-status');
+  const hudStatsLive = document.getElementById('hud-stats-live');
+  const hudStatsSummary = document.getElementById('hud-stats-summary');
   
-  const r = currentProcessedData.records[Math.floor(idx)];
-  if (!r) return;
+  if (!hudStatsLive || !hudStatsSummary) return;
 
-  const power = Math.round(getMetricValue(r, 'power'));
-  const power3s = Math.round(getMetricValue(r, 'power_3s'));
-  const speed = getMetricValue(r, 'speed').toFixed(1);
-  const hr = Math.round(getMetricValue(r, 'heart_rate'));
-  const alt = Math.round(getMetricValue(r, 'altitude'));
-  let cad = Math.round(getMetricValue(r, 'cadence'));
-  if (cad === 0) cad = '-';
+  // Show live view if it is playing, or if hovering/clicking on a specific point mid-route
+  // When stopped, currentFrameProgress is 0 -> index is 0, so isLive becomes false.
+  const isLive = isPlaying || idx > 0;
 
-  // Format Time
-  let timeStr = '-';
-  let elapsedStr = '-';
-  if (r.timestamp) {
-    const time = new Date(r.timestamp);
-    if (!isNaN(time.valueOf())) {
-      timeStr = time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-      const firstRec = currentProcessedData.records[0];
-      if (firstRec && firstRec.timestamp) {
-        const firstTime = new Date(firstRec.timestamp);
-        if (!isNaN(firstTime.valueOf())) {
-          const diffSec = Math.round((time - firstTime) / 1000);
-          const hrs = Math.floor(diffSec / 3600);
-          const mins = Math.floor((diffSec % 3600) / 60);
-          const secs = diffSec % 60;
-          elapsedStr = hrs > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  if (isLive) {
+    hudStatsLive.style.display = '';
+    hudStatsSummary.style.display = 'none';
+    if (hudStatus) hudStatus.innerText = 'LIVE';
+
+    const r = currentProcessedData.records[Math.floor(idx)];
+    if (!r) return;
+
+    const power = Math.round(getMetricValue(r, 'power'));
+    const power3s = Math.round(getMetricValue(r, 'power_3s'));
+    const speed = getMetricValue(r, 'speed').toFixed(1);
+    const hr = Math.round(getMetricValue(r, 'heart_rate'));
+    const alt = Math.round(getMetricValue(r, 'altitude'));
+    let cad = Math.round(getMetricValue(r, 'cadence'));
+    if (cad === 0) cad = '-';
+
+    // Format Time
+    let timeStr = '-';
+    let elapsedStr = '-';
+    if (r.timestamp) {
+      const time = new Date(r.timestamp);
+      if (!isNaN(time.valueOf())) {
+        timeStr = time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        const firstRec = currentProcessedData.records[0];
+        if (firstRec && firstRec.timestamp) {
+          const firstTime = new Date(firstRec.timestamp);
+          if (!isNaN(firstTime.valueOf())) {
+            const diffSec = Math.round((time - firstTime) / 1000);
+            const hrs = Math.floor(diffSec / 3600);
+            const mins = Math.floor((diffSec % 3600) / 60);
+            const secs = diffSec % 60;
+            elapsedStr = hrs > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          }
         }
       }
     }
-  }
 
-  hudStats.innerHTML = `
-    <div class="hud-item" style="color: #60a5fa;"><span class="hud-label">Time</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${timeStr}</span></div></div>
-    <div class="hud-item" style="color: #60a5fa; margin-bottom: 8px;"><span class="hud-label">Elapsed</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${elapsedStr}</span></div></div>
-    <div class="hud-item"><span class="hud-label">Power</span><div><span class="hud-value">${power > 0 ? power : '-'}</span><span class="hud-unit">W</span></div></div>
-    <div class="hud-item"><span class="hud-label">Pwr(3s)</span><div><span class="hud-value">${power3s > 0 ? power3s : '-'}</span><span class="hud-unit">W</span></div></div>
-    <div class="hud-item"><span class="hud-label">Heart</span><div><span class="hud-value">${hr > 0 ? hr : '-'}</span><span class="hud-unit">bpm</span></div></div>
-    <div class="hud-item"><span class="hud-label">Speed</span><div><span class="hud-value">${speed > 0 ? speed : '-'}</span><span class="hud-unit">km/h</span></div></div>
-    <div class="hud-item"><span class="hud-label">Cadence</span><div><span class="hud-value">${cad}</span><span class="hud-unit">rpm</span></div></div>
-    <div class="hud-item"><span class="hud-label">Elev</span><div><span class="hud-value">${alt}</span><span class="hud-unit">m</span></div></div>
-  `;
+    hudStatsLive.innerHTML = `
+      <div class="hud-item" style="color: #60a5fa;"><span class="hud-label">Time</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${timeStr}</span></div></div>
+      <div class="hud-item" style="color: #60a5fa; margin-bottom: 8px;"><span class="hud-label">Elapsed</span><div><span class="hud-value" style="font-size:1.1rem; font-weight:600;">${elapsedStr}</span></div></div>
+      <div class="hud-item"><span class="hud-label">Power</span><div><span class="hud-value">${power > 0 ? power : '-'}</span><span class="hud-unit">W</span></div></div>
+      <div class="hud-item"><span class="hud-label">Pwr(3s)</span><div><span class="hud-value">${power3s > 0 ? power3s : '-'}</span><span class="hud-unit">W</span></div></div>
+      <div class="hud-item"><span class="hud-label">Heart</span><div><span class="hud-value">${hr > 0 ? hr : '-'}</span><span class="hud-unit">bpm</span></div></div>
+      <div class="hud-item"><span class="hud-label">Speed</span><div><span class="hud-value">${speed > 0 ? speed : '-'}</span><span class="hud-unit">km/h</span></div></div>
+      <div class="hud-item"><span class="hud-label">Cadence</span><div><span class="hud-value">${cad}</span><span class="hud-unit">rpm</span></div></div>
+      <div class="hud-item"><span class="hud-label">Elev</span><div><span class="hud-value">${alt}</span><span class="hud-unit">m</span></div></div>
+    `;
+  } else {
+    hudStatsLive.style.display = 'none';
+    hudStatsSummary.style.display = '';
+    if (hudStatus) hudStatus.innerText = 'SUMMARY';
+
+    const sess = currentProcessedData.session;
+    if (!sess) return;
+    
+    const fmtTm = (s) => {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = Math.floor(s % 60);
+      if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    hudStatsSummary.innerHTML = `
+      <div class="hud-item"><span class="hud-label">Distance</span><div><span class="hud-value" style="color: var(--accent);">${sess.distance}</span><span class="hud-unit">km</span></div></div>
+      <div class="hud-item"><span class="hud-label">Time</span><div><span class="hud-value" style="color: var(--accent);">${fmtTm(sess.elapsedTime)}</span></div></div>
+      <div class="hud-item"><span class="hud-label">Ascent</span><div><span class="hud-value">${sess.totalAscent}</span><span class="hud-unit">m</span></div></div>
+      <div class="hud-item"><span class="hud-label">Speed</span><div><span class="hud-value" style="font-size:0.9rem;">${sess.avgSpeed.toFixed(1)} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Avg</span></span><br><span class="hud-value" style="font-size:0.9rem;">${sess.maxSpeed.toFixed(1)} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Max</span></span></div></div>
+      <div class="hud-item" style="grid-column: span 2;"><span class="hud-label">Power</span><div><span class="hud-value" style="font-size:0.9rem;">${sess.avgPower} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Avg</span></span> &nbsp; <span class="hud-value" style="font-size:0.9rem;">${sess.np} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">NP</span></span> &nbsp; <span class="hud-value" style="font-size:0.9rem;">${sess.maxPower} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Max</span></span></div></div>
+      <div class="hud-item"><span class="hud-label">Cadence</span><div><span class="hud-value" style="font-size:0.9rem;">${sess.avgCadence} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Avg</span></span><br><span class="hud-value" style="font-size:0.9rem;">${sess.maxCadence} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Max</span></span></div></div>
+      <div class="hud-item"><span class="hud-label">Heart</span><div><span class="hud-value" style="font-size:0.9rem;">${sess.avgHr} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Avg</span></span><br><span class="hud-value" style="font-size:0.9rem;">${sess.maxHr} <span style="font-size:0.7em; color:var(--text-secondary); font-weight:normal;">Max</span></span></div></div>
+    `;
+  }
 }
 
 function handlePathClick(info) {
